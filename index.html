@@ -6,6 +6,18 @@
   <meta name="theme-color" content="#6b73c4" />
   <title>기도수첩</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%99%8F%3C/text%3E%3C/svg%3E" />
+  <!-- 테마를 페인트 전에 적용해 깜빡임(FOUC) 방지 -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("prayerdiary-theme");
+        if (t !== "dark" && t !== "light") {
+          t = window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -16,6 +28,7 @@
 
   <!-- 로그인 화면 -->
   <section id="login-view" class="login-view" hidden>
+    <button id="theme-toggle-login" class="theme-toggle theme-toggle-floating" type="button" title="다크 모드로 전환" aria-label="테마 전환">🌙</button>
     <div class="login-card">
       <div class="login-emoji">🙏</div>
       <h1 class="login-title">기도수첩</h1>
@@ -42,6 +55,7 @@
         <span class="brand-name">기도수첩</span>
       </div>
       <div class="user-box">
+        <button id="theme-toggle" class="theme-toggle" type="button" title="다크 모드로 전환" aria-label="테마 전환">🌙</button>
         <img id="user-photo" class="user-photo" alt="" referrerpolicy="no-referrer" />
         <span id="user-name" class="user-name"></span>
         <button id="signout" class="signout-btn" title="로그아웃">로그아웃</button>

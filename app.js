@@ -33,6 +33,34 @@ const loginError = $("login-error");
 // 새 사용자에게 만들어줄 기본 카테고리
 const DEFAULT_CATEGORIES = ["가족", "교회", "개인", "감사"];
 
+// ---- 테마(다크/라이트) ----
+// 초기 테마는 <head> 인라인 스크립트가 이미 적용(저장값 → 시스템 설정 순).
+function currentTheme() {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
+}
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", theme === "dark" ? "#15161c" : "#6b73c4");
+  document.querySelectorAll(".theme-toggle").forEach((btn) => {
+    btn.textContent = theme === "dark" ? "☀️" : "🌙";
+    const label = theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환";
+    btn.title = label;
+    btn.setAttribute("aria-label", label);
+  });
+}
+function setupTheme() {
+  applyTheme(currentTheme());
+  document.querySelectorAll(".theme-toggle").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const next = currentTheme() === "dark" ? "light" : "dark";
+      try { localStorage.setItem("prayerdiary-theme", next); } catch (_) {}
+      applyTheme(next);
+    });
+  });
+}
+setupTheme();
+
 // ---- Firebase 설정 확인 ----
 const cfg = window.__FIREBASE_CONFIG__;
 const isConfigured = cfg && cfg.apiKey && !String(cfg.apiKey).includes("YOUR_");
