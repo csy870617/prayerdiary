@@ -14,6 +14,7 @@
   --shadow: 0 1px 3px rgba(40, 42, 60, 0.06), 0 4px 16px rgba(40, 42, 60, 0.06);
   --radius: 16px;
   --radius-sm: 10px;
+  color-scheme: light;
 }
 
 :root[data-theme="dark"] {
@@ -30,6 +31,7 @@
   --answered-soft: #17271f;
   --danger: #e58080;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 6px 18px rgba(0, 0, 0, 0.35);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -191,6 +193,7 @@ input { font-family: inherit; }
   outline: none;
   font-size: 15px; padding: 9px 11px;
   color: var(--text); font-family: inherit;
+  background-color: var(--surface);
 }
 .title-input:focus { border-color: var(--primary); }
 .title-input::placeholder { color: var(--text-faint); }
@@ -202,6 +205,7 @@ input { font-family: inherit; }
   outline: none;
   font-size: 15px;
   color: var(--text); font-family: inherit;
+  background-color: transparent;
   line-height: 1.6; resize: vertical; min-height: 84px;
 }
 .content-input::placeholder { color: var(--text-faint); }
@@ -353,19 +357,20 @@ input { font-family: inherit; }
 .edit-title-input {
   width: 100%; border: 1px solid var(--border); border-radius: 8px;
   padding: 9px 11px; font-size: 15px; outline: none;
-  font-family: inherit; color: var(--text);
+  font-family: inherit; color: var(--text); background-color: var(--surface);
 }
 .edit-title-input:focus { border-color: var(--primary); }
 .edit-content {
   width: 100%; border: 1px solid var(--border); border-radius: 8px;
   padding: 9px 11px; font-size: 14px; outline: none; resize: vertical; min-height: 64px;
-  font-family: inherit; color: var(--text); line-height: 1.5;
+  font-family: inherit; color: var(--text); line-height: 1.5; background-color: var(--surface);
 }
 .edit-content:focus { border-color: var(--primary); }
 .edit-controls { display: flex; gap: 8px; align-items: center; }
 .edit-cat {
   flex: 1; border: 1px solid var(--border); border-radius: 8px;
   padding: 7px 9px; font-size: 13px; outline: none;
+  color: var(--text); background-color: var(--surface);
 }
 .edit-save, .edit-cancel {
   font-size: 13px; font-weight: 600; padding: 7px 14px; border-radius: 8px;
@@ -449,6 +454,7 @@ input { font-family: inherit; }
   flex: 1; min-width: 0;
   border: 1px solid var(--border); border-radius: 8px;
   padding: 10px 11px; font-size: 14px; outline: none; color: var(--text);
+  background-color: var(--surface);
 }
 .cat-add-form input:focus { border-color: var(--primary); }
 
