@@ -53,13 +53,20 @@ jobs:
             echo "FIREBASE_* variables 미설정 — 커밋된 config.js 를 사용합니다."
           fi
 
+      - name: Assemble site files
+        run: |
+          # 사이트 구동에 필요한 파일만 _site 로 모음
+          # (firestore.rules, README, config.example.js, .github 등은 배포 제외)
+          mkdir -p _site
+          cp index.html styles.css app.js config.js _site/
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Deploy to GitHub Pages
         id: deployment

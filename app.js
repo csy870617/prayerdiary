@@ -91,6 +91,8 @@ function start() {
   let categoryFilter = null; // null = 전체
   let catModalOpen = false;
   let defaultsRequested = false; // 기본 카테고리 중복 생성 방지
+  let editingId = null; // 편집 중인 기도제목 id
+  let editDraft = null; // 편집 중 입력 보존 { title, content, category }
 
   // ---- 인증 ----
   $("google-signin").addEventListener("click", async () => {
@@ -106,15 +108,21 @@ function start() {
 
   $("signout").addEventListener("click", () => signOut(auth));
 
+  function stopSubscriptions() {
+    if (unsubscribePrayers) { unsubscribePrayers(); unsubscribePrayers = null; }
+    if (unsubscribeCategories) { unsubscribeCategories(); unsubscribeCategories = null; }
+  }
+
   onAuthStateChanged(auth, (user) => {
     loadingEl.hidden = true;
+    stopSubscriptions(); // 재구독 전 기존 구독 해제(중복/누수 방지)
+    editingId = null;
+    editDraft = null;
     if (user) {
       showApp(user);
       subscribePrayers(user.uid);
       subscribeCategories(user.uid);
     } else {
-      if (unsubscribePrayers) { unsubscribePrayers(); unsubscribePrayers = null; }
-      if (unsubscribeCategories) { unsubscribeCategories(); unsubscribeCategories = null; }
       prayers = [];
       categories = [];
       defaultsRequested = false;
@@ -171,7 +179,11 @@ function start() {
         }
         categories = Array.isArray(snap.data().items) ? snap.data().items : [];
         render();
-        if (catModalOpen) renderCategoryManager();
+        // 카테고리 이름을 입력하는 중이면 재렌더를 보류해 입력 텍스트/포커스 보존
+        const editingCatName =
+          document.activeElement &&
+          document.activeElement.classList.contains("cat-name-input");
+        if (catModalOpen && !editingCatName) renderCategoryManager();
       },
       (err) => console.error("카테고리 구독 오류:", err)
     );
@@ -190,8 +202,6 @@ function start() {
     if (!title) { titleEl.focus(); return; }
     const content = contentEl.value.trim();
     const category = $("category-select").value; // 관리 카테고리 중에서 선택
-    titleEl.value = "";
-    contentEl.value = "";
     try {
       await addDoc(prayersCol(uid()), {
         title,
@@ -202,6 +212,9 @@ function start() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      // 저장 성공 후에만 입력칸을 비움(실패 시 입력 내용 보존)
+      titleEl.value = "";
+      contentEl.value = "";
     } catch (err) {
       console.error(err);
       alert("저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
@@ -218,11 +231,16 @@ function start() {
 
   async function toggleAnswered(p) {
     const next = !p.answered;
-    await updateDoc(prayerDoc(p.id), {
-      answered: next,
-      answeredAt: next ? serverTimestamp() : null,
-      updatedAt: serverTimestamp(),
-    });
+    try {
+      await updateDoc(prayerDoc(p.id), {
+        answered: next,
+        answeredAt: next ? serverTimestamp() : null,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.error("응답 상태 변경 실패:", e);
+      alert("변경에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
   }
 
   async function saveEdit(p, newTitle, newContent, newCategory) {
@@ -236,7 +254,12 @@ function start() {
 
   async function removePrayer(p) {
     if (!confirm("이 기도제목을 삭제할까요?")) return;
-    await deleteDoc(prayerDoc(p.id));
+    try {
+      await deleteDoc(prayerDoc(p.id));
+    } catch (e) {
+      console.error("기도제목 삭제 실패:", e);
+      alert("삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
   }
 
   // ---- 카테고리 CRUD ----
@@ -249,7 +272,12 @@ function start() {
     name = name.trim();
     if (!name) return;
     if (hasCategory(name)) { alert("이미 있는 카테고리예요."); return; }
-    await saveCategories([...categories, { id: newId(), name }]);
+    try {
+      await saveCategories([...categories, { id: newId(), name }]);
+    } catch (e) {
+      console.error("카테고리 추가 실패:", e);
+      alert("카테고리 추가에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
   }
 
   async function renameCategory(id, newName) {
@@ -283,16 +311,27 @@ function start() {
     const cat = categories.find((c) => c.id === id);
     if (!cat) return;
     if (!confirm(`'${cat.name}' 카테고리를 삭제할까요?\n(이 카테고리로 적은 기도제목은 그대로 남습니다)`)) return;
-    await saveCategories(categories.filter((c) => c.id !== id));
+    try {
+      await saveCategories(categories.filter((c) => c.id !== id));
+    } catch (e) {
+      console.error("카테고리 삭제 실패:", e);
+      alert("카테고리 삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
   }
 
   async function reorderCategories(idOrder) {
     const map = new Map(categories.map((c) => [c.id, c]));
     const items = idOrder.map((id) => map.get(id)).filter(Boolean);
-    if (items.length !== categories.length) return; // 안전장치
+    if (items.length !== categories.length) { renderCategoryManager(); return; } // 안전장치
     // 순서가 그대로면 저장 생략
     if (items.every((c, i) => c.id === categories[i].id)) return;
-    await saveCategories(items);
+    try {
+      await saveCategories(items);
+    } catch (e) {
+      console.error("카테고리 순서 저장 실패:", e);
+      alert("순서 변경 저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
+      renderCategoryManager(); // 저장된 순서로 되돌림
+    }
   }
 
   // ---- 필터 ----
@@ -335,10 +374,22 @@ function start() {
 
   // ---- 렌더링 ----
   function render() {
+    captureEditDraft(); // 다시 그리기 전에 편집 중 입력 보존
     updateCounts();
     renderCategoryChips();
     renderCategorySelect();
     renderList();
+  }
+
+  // 편집 중인 카드의 현재 입력값을 editDraft 에 저장(외부 변경으로 재렌더돼도 유지)
+  function captureEditDraft() {
+    if (!editingId) return;
+    const area = $("prayer-list").querySelector(".edit-area");
+    if (!area) return;
+    const t = area.querySelector(".edit-title-input");
+    const c = area.querySelector(".edit-content");
+    const cat = area.querySelector(".edit-cat");
+    if (t && c && cat) editDraft = { title: t.value, content: c.value, category: cat.value };
   }
 
   function updateCounts() {
@@ -421,6 +472,7 @@ function start() {
 
   function visiblePrayers() {
     return prayers.filter((p) => {
+      if (p.id === editingId) return true; // 편집 중인 카드는 필터와 무관하게 표시
       if (statusFilter === "active" && p.answered) return false;
       if (statusFilter === "answered" && !p.answered) return false;
       if (categoryFilter && p.category !== categoryFilter) return false;
@@ -438,7 +490,9 @@ function start() {
       return;
     }
     emptyEl.hidden = true;
-    items.forEach((p) => listEl.appendChild(card(p)));
+    items.forEach((p) =>
+      listEl.appendChild(p.id === editingId ? buildEditCard(p) : card(p))
+    );
   }
 
   function card(p) {
@@ -493,7 +547,7 @@ function start() {
     editBtn.type = "button";
     editBtn.title = "수정";
     editBtn.textContent = "✎";
-    editBtn.addEventListener("click", () => enterEdit(el, p));
+    editBtn.addEventListener("click", () => enterEdit(p));
     const delBtn = document.createElement("button");
     delBtn.className = "icon-btn del";
     delBtn.type = "button";
@@ -506,29 +560,55 @@ function start() {
     return el;
   }
 
-  function enterEdit(cardEl, p) {
-    cardEl.innerHTML = "";
-    cardEl.classList.remove("is-answered");
+  // 편집 모드 진입: 상태만 바꾸고 render() 가 해당 카드를 편집 카드로 그림
+  function enterEdit(p) {
+    editingId = p.id;
+    editDraft = null;
+    render();
+    const input = $("prayer-list").querySelector(".edit-title-input");
+    if (input) {
+      input.focus();
+      const v = input.value;
+      input.value = "";
+      input.value = v; // 커서를 끝으로 이동
+    }
+  }
+
+  function exitEdit() {
+    editingId = null;
+    editDraft = null;
+    render();
+  }
+
+  // 편집 카드 DOM 생성(편집 중 입력은 editDraft 로 보존)
+  function buildEditCard(p) {
+    const cardEl = document.createElement("div");
+    cardEl.className = "prayer-card";
     const area = document.createElement("div");
     area.className = "edit-area";
+
+    const seed =
+      editingId === p.id && editDraft
+        ? editDraft
+        : { title: p.title || "", content: p.content || "", category: p.category || "" };
 
     const titleInput = document.createElement("input");
     titleInput.className = "edit-title-input";
     titleInput.type = "text";
     titleInput.maxLength = 100;
     titleInput.placeholder = "제목";
-    titleInput.value = p.title || "";
+    titleInput.value = seed.title;
 
     const ta = document.createElement("textarea");
     ta.className = "edit-content";
     ta.placeholder = "기도 내용을 입력하세요";
-    ta.value = p.content || "";
+    ta.value = seed.content;
 
     const controls = document.createElement("div");
     controls.className = "edit-controls";
     const catSelect = document.createElement("select");
     catSelect.className = "edit-cat";
-    fillCategoryOptions(catSelect, p.category);
+    fillCategoryOptions(catSelect, seed.category);
 
     const save = document.createElement("button");
     save.className = "edit-save";
@@ -538,19 +618,26 @@ function start() {
       const t = titleInput.value.trim();
       if (!t) { titleInput.focus(); return; }
       save.disabled = true;
-      await saveEdit(p, t, ta.value.trim(), catSelect.value);
+      try {
+        await saveEdit(p, t, ta.value.trim(), catSelect.value);
+        exitEdit();
+      } catch (e) {
+        console.error("수정 저장 실패:", e);
+        alert("저장에 실패했습니다. 잠시 후 다시 시도해주세요.");
+        save.disabled = false;
+      }
     });
 
     const cancel = document.createElement("button");
     cancel.className = "edit-cancel";
     cancel.type = "button";
     cancel.textContent = "취소";
-    cancel.addEventListener("click", () => render());
+    cancel.addEventListener("click", () => exitEdit());
 
     controls.append(catSelect, save, cancel);
     area.append(titleInput, ta, controls);
     cardEl.appendChild(area);
-    titleInput.focus();
+    return cardEl;
   }
 
   // ---- 카테고리 관리 목록 렌더 + 드래그 정렬 ----
