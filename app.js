@@ -176,6 +176,14 @@ function start() {
     }
   });
 
+  // 여러 줄 입력: Enter 는 줄바꿈, Ctrl/⌘+Enter 로 추가
+  $("title-input").addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      e.preventDefault();
+      $("add-form").requestSubmit();
+    }
+  });
+
   async function toggleAnswered(p) {
     const next = !p.answered;
     await updateDoc(prayerDoc(p.id), {

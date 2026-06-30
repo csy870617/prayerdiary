@@ -51,14 +51,14 @@
     <main class="app-main">
       <!-- 입력 -->
       <form id="add-form" class="add-form" autocomplete="off">
-        <input
+        <textarea
           id="title-input"
           class="title-input"
-          type="text"
           placeholder="기도제목을 입력하세요"
-          maxlength="200"
+          maxlength="500"
+          rows="3"
           required
-        />
+        ></textarea>
         <div class="add-row">
           <select id="category-select" class="category-select" aria-label="카테고리 선택"></select>
           <button type="submit" class="add-btn">추가</button>
