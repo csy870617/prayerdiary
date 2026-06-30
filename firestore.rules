@@ -1,0 +1,32 @@
+rules_version = '2';
+
+// 기도수첩 Firestore 보안 규칙
+// Firebase 콘솔 → Firestore Database → 규칙(Rules) 탭에 아래 내용을 붙여넣고 게시하세요.
+// 핵심: 로그인한 사용자는 자기 자신(users/{uid}) 하위 데이터만 읽고 쓸 수 있습니다.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId}/prayers/{prayerId} {
+      // 본인 문서만 접근 허용
+      allow read, delete: if isOwner(userId);
+
+      // 생성·수정 시 필드 형식 검증
+      allow create: if isOwner(userId) && isValidPrayer();
+      allow update: if isOwner(userId) && isValidPrayer();
+    }
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    function isValidPrayer() {
+      let d = request.resource.data;
+      return d.title is string
+        && d.title.size() > 0
+        && d.title.size() <= 500
+        && d.answered is bool
+        && (!('category' in d) || d.category is string);
+    }
+  }
+}

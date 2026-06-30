@@ -1,0 +1,9 @@
+# 로컬 개발용 Firebase 설정 (배포 시 워크플로우가 자동 생성)
+config.js
+
+# OS / 에디터
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
