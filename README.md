@@ -42,9 +42,15 @@
 ### 1. Pages 소스 지정
 - 저장소 **Settings → Pages → Build and deployment → Source** 를 **GitHub Actions** 로 설정.
 
-### 2. Firebase 설정값을 저장소 Variables에 등록
-- **Settings → Secrets and variables → Actions → Variables** 탭에서 아래 6개를
-  **New repository variable** 로 추가합니다. (값은 위 1번에서 복사한 `firebaseConfig` 값)
+### 2. Firebase 설정값
+- 이 저장소에는 [`config.js`](./config.js)에 Firebase 웹 설정이 **이미 포함**되어 있어
+  추가 설정 없이 바로 배포됩니다.
+- 설정을 바꾸고 싶으면 `config.js`를 수정하거나, 아래 **선택 사항**처럼 저장소 Variables로 덮어쓸 수 있습니다.
+
+  <details><summary>선택: 저장소 Variables로 관리하기</summary>
+
+  **Settings → Secrets and variables → Actions → Variables** 탭에서 아래 6개를
+  **New repository variable** 로 추가하면, 배포 시 워크플로우가 `config.js`를 이 값으로 덮어씁니다.
 
   | 변수 이름 | 예시 값 |
   |---|---|
@@ -55,8 +61,8 @@
   | `FIREBASE_MESSAGING_SENDER_ID` | `1234567890` |
   | `FIREBASE_APP_ID` | `1:1234567890:web:abcdef` |
 
-  > 이 값들은 비밀이 아니라 공개돼도 안전한 식별자입니다. 보안은 `firestore.rules`가 담당하므로
-  > Secrets가 아닌 **Variables** 로 관리합니다.
+  > 이 값들은 비밀이 아니라 공개돼도 안전한 식별자입니다. 보안은 `firestore.rules`와 승인된 도메인이 담당합니다.
+  </details>
 
 ### 3. 배포
 - `main` 브랜치에 push 하면 워크플로우([`.github/workflows/deploy.yml`](./.github/workflows/deploy.yml))가
@@ -69,17 +75,14 @@
 ## 로컬에서 실행해보기
 
 ```bash
-# 1) 설정 파일 준비 (값은 Firebase 콘솔에서 복사)
-cp config.example.js config.js
-#   → config.js를 열어 apiKey 등 실제 값으로 채우기
-
-# 2) 정적 서버 실행
+# config.js 가 이미 포함되어 있으므로 바로 실행하면 됩니다.
 python3 -m http.server 8000
 
-# 3) 브라우저에서 http://localhost:8000 접속
+# 브라우저에서 http://localhost:8000 접속
 ```
 
-`config.js`는 `.gitignore`에 포함되어 커밋되지 않습니다.
+> 로컬에서 Google 로그인을 쓰려면 Firebase의 승인된 도메인에 `localhost`가 포함돼 있어야 합니다(기본 포함).
+> 다른 Firebase 프로젝트로 바꾸려면 `config.js` 값을 교체하세요. (`config.example.js`는 형식 참고용)
 
 ---
 

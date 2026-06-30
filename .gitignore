@@ -1,5 +1,6 @@
-# 로컬 개발용 Firebase 설정 (배포 시 워크플로우가 자동 생성)
-config.js
+# 참고: config.js 에는 Firebase 웹 설정(공개돼도 안전한 식별자)이 들어 있어 저장소에 포함합니다.
+# 실제 보안은 firestore.rules + 승인된 도메인이 담당합니다.
+# (워크플로우는 저장소 Variables 가 설정돼 있으면 그 값으로 config.js 를 덮어씁니다.)
 
 # OS / 에디터
 .DS_Store
