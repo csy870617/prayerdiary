@@ -16,6 +16,11 @@ service cloud.firestore {
       allow update: if isOwner(userId) && isValidPrayer();
     }
 
+    // 카테고리 등 사용자 설정 문서 (예: meta/categories)
+    match /users/{userId}/meta/{docId} {
+      allow read, write: if isOwner(userId);
+    }
+
     function isOwner(userId) {
       return request.auth != null && request.auth.uid == userId;
     }

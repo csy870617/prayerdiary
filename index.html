@@ -80,7 +80,10 @@
           <button class="tab" data-status="active">기도중 <span class="count" data-count="active">0</span></button>
           <button class="tab" data-status="answered">응답됨 <span class="count" data-count="answered">0</span></button>
         </div>
-        <div class="category-chips" id="category-chips"></div>
+        <div class="category-row">
+          <div class="category-chips" id="category-chips"></div>
+          <button id="manage-cats" class="manage-cats-btn" type="button" title="카테고리 관리">⚙ 카테고리</button>
+        </div>
       </div>
 
       <!-- 목록 -->
@@ -91,6 +94,23 @@
       </div>
     </main>
   </section>
+
+  <!-- 카테고리 관리 모달 -->
+  <div id="cat-modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <h2>카테고리 관리</h2>
+        <button class="modal-close" type="button" data-close title="닫기">✕</button>
+      </div>
+      <p class="modal-hint">≡ 를 끌어(마우스·터치) 순서를 바꿀 수 있어요. 이름을 눌러 수정합니다.</p>
+      <ul id="cat-list" class="cat-manage-list"></ul>
+      <form id="cat-add-form" class="cat-add-form" autocomplete="off">
+        <input id="cat-add-input" type="text" maxlength="20" placeholder="새 카테고리 추가" />
+        <button type="submit" class="add-btn">추가</button>
+      </form>
+    </div>
+  </div>
 
   <!-- Firebase 미설정 안내 -->
   <div id="config-warning" class="config-warning" hidden>
