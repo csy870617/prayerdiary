@@ -157,16 +157,10 @@ function start() {
   $("add-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const titleEl = $("title-input");
-    const catEl = $("category-input");
     const title = titleEl.value.trim();
     if (!title) return;
-    const category = catEl.value.trim();
+    const category = $("category-select").value; // 관리 카테고리 중에서 선택
     titleEl.value = "";
-    catEl.value = "";
-    // 새 카테고리를 입력했다면 관리 목록에도 자동 추가
-    if (category && !hasCategory(category)) {
-      saveCategories([...categories, { id: newId(), name: category }]).catch(console.error);
-    }
     try {
       await addDoc(prayersCol(uid()), {
         title,
@@ -192,9 +186,6 @@ function start() {
   }
 
   async function saveEdit(p, newTitle, newCategory) {
-    if (newCategory && !hasCategory(newCategory)) {
-      saveCategories([...categories, { id: newId(), name: newCategory }]).catch(console.error);
-    }
     await updateDoc(prayerDoc(p.id), {
       title: newTitle,
       category: newCategory,
@@ -305,7 +296,7 @@ function start() {
   function render() {
     updateCounts();
     renderCategoryChips();
-    renderDatalist();
+    renderCategorySelect();
     renderList();
   }
 
@@ -357,14 +348,34 @@ function start() {
     return b;
   }
 
-  function renderDatalist() {
-    const list = $("category-list");
-    list.innerHTML = "";
-    orderedCategoryNames().forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c;
-      list.appendChild(opt);
+  // 입력 폼의 카테고리 선택 드롭다운 채우기 (관리 카테고리만 선택 가능)
+  function renderCategorySelect() {
+    const sel = $("category-select");
+    const prev = sel.value;
+    fillCategoryOptions(sel, prev);
+  }
+
+  // <select> 를 "카테고리 없음" + 관리 카테고리로 채움.
+  // current 값이 관리 목록에 없으면(삭제된 카테고리 등) 보존용 옵션을 추가.
+  function fillCategoryOptions(sel, current) {
+    sel.innerHTML = "";
+    const none = document.createElement("option");
+    none.value = "";
+    none.textContent = "카테고리 없음";
+    sel.appendChild(none);
+    categories.forEach((c) => {
+      const o = document.createElement("option");
+      o.value = c.name;
+      o.textContent = c.name;
+      sel.appendChild(o);
     });
+    if (current && !categories.some((c) => c.name === current)) {
+      const o = document.createElement("option");
+      o.value = current;
+      o.textContent = current + " (삭제됨)";
+      sel.appendChild(o);
+    }
+    sel.value = current || "";
   }
 
   function visiblePrayers() {
@@ -459,12 +470,9 @@ function start() {
 
     const controls = document.createElement("div");
     controls.className = "edit-controls";
-    const catInput = document.createElement("input");
-    catInput.className = "edit-cat";
-    catInput.type = "text";
-    catInput.placeholder = "카테고리";
-    catInput.value = p.category || "";
-    catInput.setAttribute("list", "category-list");
+    const catSelect = document.createElement("select");
+    catSelect.className = "edit-cat";
+    fillCategoryOptions(catSelect, p.category);
 
     const save = document.createElement("button");
     save.className = "edit-save";
@@ -474,7 +482,7 @@ function start() {
       const t = ta.value.trim();
       if (!t) { ta.focus(); return; }
       save.disabled = true;
-      await saveEdit(p, t, catInput.value.trim());
+      await saveEdit(p, t, catSelect.value);
     });
 
     const cancel = document.createElement("button");
@@ -483,7 +491,7 @@ function start() {
     cancel.textContent = "취소";
     cancel.addEventListener("click", () => render());
 
-    controls.append(catInput, save, cancel);
+    controls.append(catSelect, save, cancel);
     area.append(ta, controls);
     cardEl.appendChild(area);
     ta.focus();

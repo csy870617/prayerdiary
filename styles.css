@@ -152,15 +152,21 @@ input { font-family: inherit; }
   margin-top: 10px; padding-top: 10px;
   border-top: 1px solid var(--border);
 }
-.category-input {
+.category-select {
   flex: 1; min-width: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 9px 11px;
+  padding: 9px 32px 9px 11px;
   font-size: 14px; outline: none;
   color: var(--text);
+  background-color: var(--surface);
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239a9db0' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  cursor: pointer;
 }
-.category-input:focus { border-color: var(--primary); }
+.category-select:focus { border-color: var(--primary); }
 .add-btn {
   flex-shrink: 0;
   background: var(--primary);
