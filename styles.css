@@ -234,6 +234,29 @@ input { font-family: inherit; }
 .add-btn:hover { background: var(--primary-dark); }
 .add-btn:active { transform: translateY(1px); }
 
+/* 검색 */
+.search-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 14px;
+}
+.search-icon { font-size: 14px; opacity: 0.7; flex-shrink: 0; }
+.search-input {
+  flex: 1; min-width: 0;
+  border: none; outline: none; background: transparent;
+  font-size: 14px; color: var(--text); font-family: inherit;
+}
+.search-input::placeholder { color: var(--text-faint); }
+.search-clear {
+  flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--text-soft); background: var(--bg);
+}
+.search-clear:hover { background: var(--border); color: var(--text); }
+
 /* 필터 */
 .filters { margin-bottom: 14px; }
 .filter-tabs {

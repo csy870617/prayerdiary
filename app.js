@@ -89,6 +89,7 @@ function start() {
   let categories = []; // [{ id, name }] 순서대로
   let statusFilter = "all"; // all | active | answered
   let categoryFilter = null; // null = 전체
+  let searchQuery = ""; // 소문자·trim 된 검색어
   let catModalOpen = false;
   let trashModalOpen = false;
   let defaultsRequested = false; // 기본 카테고리 중복 생성 방지
@@ -127,6 +128,9 @@ function start() {
       prayers = [];
       categories = [];
       defaultsRequested = false;
+      searchQuery = "";
+      $("search-input").value = "";
+      $("search-clear").hidden = true;
       closeCatModal();
       closeTrashModal();
       loginView.hidden = false;
@@ -377,6 +381,21 @@ function start() {
     }
   }
 
+  // ---- 검색 ----
+  $("search-input").addEventListener("input", (e) => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    $("search-clear").hidden = e.target.value.length === 0;
+    renderList(); // 목록만 갱신(검색 입력 포커스 유지)
+  });
+  $("search-clear").addEventListener("click", () => {
+    const inp = $("search-input");
+    inp.value = "";
+    searchQuery = "";
+    $("search-clear").hidden = true;
+    inp.focus();
+    renderList();
+  });
+
   // ---- 필터 ----
   $("status-tabs").addEventListener("click", (e) => {
     const btn = e.target.closest(".tab");
@@ -539,10 +558,14 @@ function start() {
   function visiblePrayers() {
     return prayers.filter((p) => {
       if (p.deleted) return false; // 휴지통 항목은 메인 목록에서 제외
-      if (p.id === editingId) return true; // 편집 중인 카드는 필터와 무관하게 표시
+      if (p.id === editingId) return true; // 편집 중인 카드는 필터/검색과 무관하게 표시
       if (statusFilter === "active" && p.answered) return false;
       if (statusFilter === "answered" && !p.answered) return false;
       if (categoryFilter && p.category !== categoryFilter) return false;
+      if (searchQuery) {
+        const hay = `${p.title || ""} ${p.content || ""} ${p.category || ""}`.toLowerCase();
+        if (!hay.includes(searchQuery)) return false;
+      }
       return true;
     });
   }
@@ -554,6 +577,16 @@ function start() {
     listEl.innerHTML = "";
     if (items.length === 0) {
       emptyEl.hidden = false;
+      const hasAny = prayers.some((p) => !p.deleted);
+      const et = emptyEl.querySelector(".empty-text");
+      if (et) {
+        if (hasAny) {
+          // 기도제목은 있으나 검색/필터에 맞는 게 없음
+          et.textContent = "조건에 맞는 기도제목이 없어요.";
+        } else {
+          et.innerHTML = "아직 기도제목이 없어요.<br />첫 기도제목을 적어보세요.";
+        }
+      }
       return;
     }
     emptyEl.hidden = true;
