@@ -157,13 +157,17 @@ function start() {
   $("add-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const titleEl = $("title-input");
+    const contentEl = $("content-input");
     const title = titleEl.value.trim();
-    if (!title) return;
+    if (!title) { titleEl.focus(); return; }
+    const content = contentEl.value.trim();
     const category = $("category-select").value; // 관리 카테고리 중에서 선택
     titleEl.value = "";
+    contentEl.value = "";
     try {
       await addDoc(prayersCol(uid()), {
         title,
+        content,
         category,
         answered: false,
         answeredAt: null,
@@ -176,8 +180,8 @@ function start() {
     }
   });
 
-  // 여러 줄 입력: Enter 는 줄바꿈, Ctrl/⌘+Enter 로 추가
-  $("title-input").addEventListener("keydown", (e) => {
+  // 내용은 여러 줄 입력: Enter 는 줄바꿈, Ctrl/⌘+Enter 로 추가
+  $("content-input").addEventListener("keydown", (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
       e.preventDefault();
       $("add-form").requestSubmit();
@@ -193,9 +197,10 @@ function start() {
     });
   }
 
-  async function saveEdit(p, newTitle, newCategory) {
+  async function saveEdit(p, newTitle, newContent, newCategory) {
     await updateDoc(prayerDoc(p.id), {
       title: newTitle,
+      content: newContent,
       category: newCategory,
       updatedAt: serverTimestamp(),
     });
@@ -369,7 +374,7 @@ function start() {
     sel.innerHTML = "";
     const none = document.createElement("option");
     none.value = "";
-    none.textContent = "카테고리 없음";
+    none.textContent = "카테고리";
     sel.appendChild(none);
     categories.forEach((c) => {
       const o = document.createElement("option");
@@ -426,6 +431,13 @@ function start() {
     title.textContent = p.title;
     body.appendChild(title);
 
+    if (p.content) {
+      const content = document.createElement("div");
+      content.className = "card-content";
+      content.textContent = p.content;
+      body.appendChild(content);
+    }
+
     const meta = document.createElement("div");
     meta.className = "card-meta";
     if (p.category) {
@@ -472,9 +484,17 @@ function start() {
     const area = document.createElement("div");
     area.className = "edit-area";
 
+    const titleInput = document.createElement("input");
+    titleInput.className = "edit-title-input";
+    titleInput.type = "text";
+    titleInput.maxLength = 100;
+    titleInput.placeholder = "제목";
+    titleInput.value = p.title || "";
+
     const ta = document.createElement("textarea");
-    ta.className = "edit-title";
-    ta.value = p.title;
+    ta.className = "edit-content";
+    ta.placeholder = "기도 내용을 입력하세요";
+    ta.value = p.content || "";
 
     const controls = document.createElement("div");
     controls.className = "edit-controls";
@@ -487,10 +507,10 @@ function start() {
     save.type = "button";
     save.textContent = "저장";
     save.addEventListener("click", async () => {
-      const t = ta.value.trim();
-      if (!t) { ta.focus(); return; }
+      const t = titleInput.value.trim();
+      if (!t) { titleInput.focus(); return; }
       save.disabled = true;
-      await saveEdit(p, t, catSelect.value);
+      await saveEdit(p, t, ta.value.trim(), catSelect.value);
     });
 
     const cancel = document.createElement("button");
@@ -500,9 +520,9 @@ function start() {
     cancel.addEventListener("click", () => render());
 
     controls.append(catSelect, save, cancel);
-    area.append(ta, controls);
+    area.append(titleInput, ta, controls);
     cardEl.appendChild(area);
-    ta.focus();
+    titleInput.focus();
   }
 
   // ---- 카테고리 관리 목록 렌더 + 드래그 정렬 ----
