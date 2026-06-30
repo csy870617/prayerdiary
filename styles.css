@@ -257,7 +257,7 @@ input { font-family: inherit; }
 .tab.active .count { background: var(--primary); color: #fff; }
 
 .category-row {
-  display: flex; align-items: flex-start; gap: 8px;
+  display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px;
   margin-top: 12px;
 }
 .category-chips {
@@ -273,6 +273,13 @@ input { font-family: inherit; }
   transition: all 0.15s;
 }
 .manage-cats-btn:hover { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-dark); }
+.trash-count {
+  margin-left: 5px;
+  font-size: 10.5px; font-weight: 700;
+  background: var(--primary); color: #fff;
+  min-width: 16px; padding: 0 5px; border-radius: 20px;
+  display: inline-block; text-align: center;
+}
 .cat-chip {
   font-size: 12px; font-weight: 600;
   padding: 5px 12px; border-radius: 20px;
@@ -457,6 +464,42 @@ input { font-family: inherit; }
   background-color: var(--surface);
 }
 .cat-add-form input:focus { border-color: var(--primary); }
+
+/* 휴지통 모달 */
+.trash-list { display: flex; flex-direction: column; gap: 8px; }
+.trash-empty { color: var(--text-faint); font-size: 14px; padding: 16px 2px; text-align: center; }
+.trash-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.trash-body { flex: 1; min-width: 0; }
+.trash-title {
+  font-size: 14.5px; color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.trash-date { font-size: 12px; color: var(--text-faint); margin-top: 3px; }
+.trash-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.trash-restore {
+  font-size: 12.5px; font-weight: 600;
+  padding: 6px 12px; border-radius: 8px;
+  background: var(--primary-soft); color: var(--primary-dark);
+}
+.trash-restore:hover { background: var(--primary); color: #fff; }
+.trash-foot {
+  margin-top: 16px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end;
+}
+.empty-trash-btn {
+  font-size: 13px; font-weight: 600;
+  padding: 8px 14px; border-radius: 8px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--danger);
+}
+.empty-trash-btn:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
 
 /* Firebase 미설정 */
 .config-warning {

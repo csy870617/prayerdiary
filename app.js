@@ -90,6 +90,7 @@ function start() {
   let statusFilter = "all"; // all | active | answered
   let categoryFilter = null; // null = 전체
   let catModalOpen = false;
+  let trashModalOpen = false;
   let defaultsRequested = false; // 기본 카테고리 중복 생성 방지
   let editingId = null; // 편집 중인 기도제목 id
   let editDraft = null; // 편집 중 입력 보존 { title, content, category }
@@ -127,6 +128,7 @@ function start() {
       categories = [];
       defaultsRequested = false;
       closeCatModal();
+      closeTrashModal();
       loginView.hidden = false;
       appView.hidden = true;
     }
@@ -252,13 +254,54 @@ function start() {
     });
   }
 
+  // 삭제 = 휴지통으로 이동(소프트 삭제). 되돌릴 수 있으므로 확인창 없이 처리.
   async function removePrayer(p) {
-    if (!confirm("이 기도제목을 삭제할까요?")) return;
+    try {
+      await updateDoc(prayerDoc(p.id), {
+        deleted: true,
+        deletedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.error("휴지통 이동 실패:", e);
+      alert("삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+  }
+
+  async function restorePrayer(p) {
+    try {
+      await updateDoc(prayerDoc(p.id), {
+        deleted: false,
+        deletedAt: null,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.error("복원 실패:", e);
+      alert("복원에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+  }
+
+  async function permanentDeletePrayer(p) {
+    if (!confirm("완전히 삭제할까요?\n삭제하면 복구할 수 없습니다.")) return;
     try {
       await deleteDoc(prayerDoc(p.id));
     } catch (e) {
-      console.error("기도제목 삭제 실패:", e);
+      console.error("완전 삭제 실패:", e);
       alert("삭제에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
+  }
+
+  async function emptyTrash() {
+    const items = trashedPrayers();
+    if (items.length === 0) return;
+    if (!confirm(`휴지통의 ${items.length}개를 완전히 삭제할까요?\n삭제하면 복구할 수 없습니다.`)) return;
+    try {
+      const batch = writeBatch(db);
+      items.forEach((p) => batch.delete(prayerDoc(p.id)));
+      await batch.commit();
+    } catch (e) {
+      console.error("휴지통 비우기 실패:", e);
+      alert("휴지통 비우기에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }
   }
 
@@ -358,7 +401,9 @@ function start() {
     input.focus();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && catModalOpen) closeCatModal();
+    if (e.key !== "Escape") return;
+    if (catModalOpen) closeCatModal();
+    if (trashModalOpen) closeTrashModal();
   });
 
   function openCatModal() {
@@ -372,6 +417,24 @@ function start() {
     if (m) m.hidden = true;
   }
 
+  // ---- 휴지통 모달 ----
+  $("open-trash").addEventListener("click", openTrashModal);
+  $("trash-modal").addEventListener("click", (e) => {
+    if (e.target.hasAttribute("data-close")) closeTrashModal();
+  });
+  $("empty-trash").addEventListener("click", emptyTrash);
+
+  function openTrashModal() {
+    trashModalOpen = true;
+    $("trash-modal").hidden = false;
+    renderTrash();
+  }
+  function closeTrashModal() {
+    trashModalOpen = false;
+    const m = $("trash-modal");
+    if (m) m.hidden = true;
+  }
+
   // ---- 렌더링 ----
   function render() {
     captureEditDraft(); // 다시 그리기 전에 편집 중 입력 보존
@@ -379,6 +442,8 @@ function start() {
     renderCategoryChips();
     renderCategorySelect();
     renderList();
+    renderTrashButton();
+    if (trashModalOpen) renderTrash();
   }
 
   // 편집 중인 카드의 현재 입력값을 editDraft 에 저장(외부 변경으로 재렌더돼도 유지)
@@ -393,8 +458,9 @@ function start() {
   }
 
   function updateCounts() {
-    const all = prayers.length;
-    const answered = prayers.filter((p) => p.answered).length;
+    const active = prayers.filter((p) => !p.deleted); // 휴지통 제외
+    const all = active.length;
+    const answered = active.filter((p) => p.answered).length;
     setCount("all", all);
     setCount("active", all - answered);
     setCount("answered", answered);
@@ -472,6 +538,7 @@ function start() {
 
   function visiblePrayers() {
     return prayers.filter((p) => {
+      if (p.deleted) return false; // 휴지통 항목은 메인 목록에서 제외
       if (p.id === editingId) return true; // 편집 중인 카드는 필터와 무관하게 표시
       if (statusFilter === "active" && p.answered) return false;
       if (statusFilter === "answered" && !p.answered) return false;
@@ -493,6 +560,70 @@ function start() {
     items.forEach((p) =>
       listEl.appendChild(p.id === editingId ? buildEditCard(p) : card(p))
     );
+  }
+
+  // ---- 휴지통 ----
+  function trashedPrayers() {
+    return prayers
+      .filter((p) => p.deleted)
+      .sort((a, b) => (b.deletedAt?.seconds || 0) - (a.deletedAt?.seconds || 0));
+  }
+
+  function renderTrashButton() {
+    const badge = $("trash-count");
+    if (!badge) return;
+    const n = trashedPrayers().length;
+    badge.textContent = n;
+    badge.hidden = n === 0;
+  }
+
+  function renderTrash() {
+    const listEl = $("trash-list");
+    const emptyEl = $("trash-empty");
+    const foot = $("trash-foot");
+    const items = trashedPrayers();
+    listEl.innerHTML = "";
+    if (items.length === 0) {
+      emptyEl.hidden = false;
+      foot.hidden = true;
+      return;
+    }
+    emptyEl.hidden = true;
+    foot.hidden = false;
+    items.forEach((p) => listEl.appendChild(trashRow(p)));
+  }
+
+  function trashRow(p) {
+    const row = document.createElement("div");
+    row.className = "trash-row";
+
+    const body = document.createElement("div");
+    body.className = "trash-body";
+    const title = document.createElement("div");
+    title.className = "trash-title";
+    title.textContent = p.title || "(제목 없음)";
+    const date = document.createElement("div");
+    date.className = "trash-date";
+    date.textContent = fmtDate(p.deletedAt) + " 삭제" + (p.category ? " · " + p.category : "");
+    body.append(title, date);
+
+    const actions = document.createElement("div");
+    actions.className = "trash-actions";
+    const restore = document.createElement("button");
+    restore.className = "trash-restore";
+    restore.type = "button";
+    restore.textContent = "복원";
+    restore.addEventListener("click", () => restorePrayer(p));
+    const del = document.createElement("button");
+    del.className = "icon-btn del";
+    del.type = "button";
+    del.title = "완전 삭제";
+    del.textContent = "🗑";
+    del.addEventListener("click", () => permanentDeletePrayer(p));
+    actions.append(restore, del);
+
+    row.append(body, actions);
+    return row;
   }
 
   function card(p) {
