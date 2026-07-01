@@ -4,6 +4,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithCredential,
   signOut,
   onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -109,6 +110,28 @@ function start() {
   });
 
   $("signout").addEventListener("click", () => signOut(auth));
+
+  // ---- FAITHS 통합 로그인(수신) ----
+  // FAITHS(https://csy870617.github.io/faiths/) 앱 내부 브라우저(iframe)로 열린 경우,
+  // 부모 창이 보내주는 Google ID 토큰으로 자동 로그인해 자체 로그인 화면을 건너뛴다.
+  (function setupFaithsSso() {
+    const FAITHS_ORIGIN = "https://csy870617.github.io";
+    if (window.parent === window) return; // iframe이 아니면 아무것도 하지 않음
+    onAuthStateChanged(auth, (user) => {
+      if (user) return; // 이미 로그인돼 있으면 건너뜀
+      function onMsg(e) {
+        if (e.origin !== FAITHS_ORIGIN) return;
+        if (!e.data || e.data.type !== "faiths-google-idtoken" || !e.data.idToken) return;
+        window.removeEventListener("message", onMsg);
+        const cred = GoogleAuthProvider.credential(e.data.idToken);
+        signInWithCredential(auth, cred).catch((err) => {
+          console.log("FAITHS SSO 실패:", err && err.code);
+        });
+      }
+      window.addEventListener("message", onMsg);
+      window.parent.postMessage({ type: "faiths-request-idtoken" }, FAITHS_ORIGIN);
+    });
+  })();
 
   function stopSubscriptions() {
     if (unsubscribePrayers) { unsubscribePrayers(); unsubscribePrayers = null; }
