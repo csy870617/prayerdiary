@@ -300,9 +300,12 @@ function start() {
     if (items.length === 0) return;
     if (!confirm(`휴지통의 ${items.length}개를 완전히 삭제할까요?\n삭제하면 복구할 수 없습니다.`)) return;
     try {
-      const batch = writeBatch(db);
-      items.forEach((p) => batch.delete(prayerDoc(p.id)));
-      await batch.commit();
+      // Firestore 배치는 최대 500개 연산까지만 허용되므로 500개 단위로 나눠 커밋
+      for (let i = 0; i < items.length; i += 500) {
+        const batch = writeBatch(db);
+        items.slice(i, i + 500).forEach((p) => batch.delete(prayerDoc(p.id)));
+        await batch.commit();
+      }
     } catch (e) {
       console.error("휴지통 비우기 실패:", e);
       alert("휴지통 비우기에 실패했습니다. 잠시 후 다시 시도해주세요.");
@@ -339,14 +342,18 @@ function start() {
     }
     const oldName = cat.name;
     const items = categories.map((c) => (c.id === id ? { ...c, name: newName } : c));
+    const affected = prayers.filter((p) => p.category === oldName);
     try {
-      const batch = writeBatch(db);
-      batch.set(categoriesDoc(uid()), { items, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(categoriesDoc(uid()), { items, updatedAt: serverTimestamp() }, { merge: true });
       // 기존 기도제목의 카테고리 이름도 함께 갱신
-      prayers
-        .filter((p) => p.category === oldName)
-        .forEach((p) => batch.update(prayerDoc(p.id), { category: newName, updatedAt: serverTimestamp() }));
-      await batch.commit();
+      // (Firestore 배치는 최대 500개 연산까지만 허용되므로 500개 단위로 나눠 커밋)
+      for (let i = 0; i < affected.length; i += 500) {
+        const batch = writeBatch(db);
+        affected
+          .slice(i, i + 500)
+          .forEach((p) => batch.update(prayerDoc(p.id), { category: newName, updatedAt: serverTimestamp() }));
+        await batch.commit();
+      }
       return true;
     } catch (e) {
       console.error("카테고리 이름 변경 실패:", e);
@@ -766,6 +773,7 @@ function start() {
     const ta = document.createElement("textarea");
     ta.className = "edit-content";
     ta.placeholder = "기도 내용을 입력하세요";
+    ta.maxLength = 1000;
     ta.value = seed.content;
 
     const controls = document.createElement("div");

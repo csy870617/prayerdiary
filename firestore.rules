@@ -31,7 +31,10 @@ service cloud.firestore {
         && d.title.size() > 0
         && d.title.size() <= 500
         && d.answered is bool
-        && (!('category' in d) || d.category is string);
+        && (!('category' in d) || d.category is string)
+        && (!('content' in d) || (d.content is string && d.content.size() <= 5000))
+        && (!('deleted' in d) || d.deleted is bool)
+        && (!('deletedAt' in d) || d.deletedAt == null || d.deletedAt is timestamp);
     }
   }
 }
